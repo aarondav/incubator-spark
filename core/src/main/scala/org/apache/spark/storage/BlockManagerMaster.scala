@@ -17,14 +17,23 @@
 
 package org.apache.spark.storage
 
-import akka.actor.ActorRef
-import akka.dispatch.{Await, Future}
+import java.io._
+import java.util.{HashMap => JHashMap}
+
+import scala.collection.JavaConverters._
+import scala.collection.mutable.{ArrayBuffer, HashMap, HashSet}
+import scala.util.Random
+
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import scala.concurrent.Await
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+
 import akka.pattern.ask
-import akka.util.Duration
+import scala.concurrent.duration._
 
 import org.apache.spark.{Logging, SparkException}
 import org.apache.spark.storage.BlockManagerMessages._
-
 
 private[spark] class BlockManagerMaster(var driverActor: ActorRef) extends Logging {
 

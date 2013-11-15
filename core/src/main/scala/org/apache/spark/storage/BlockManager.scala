@@ -24,9 +24,9 @@ import scala.collection.mutable.{HashMap, ArrayBuffer}
 import scala.util.Random
 
 import akka.actor.{ActorSystem, Cancellable, Props}
-import akka.dispatch.{Await, Future}
-import akka.util.Duration
-import akka.util.duration._
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 import it.unimi.dsi.fastutil.io.{FastBufferedOutputStream, FastByteArrayOutputStream}
 
@@ -865,6 +865,7 @@ private[spark] object BlockManager extends Logging {
   }
 
   def getHeartBeatFrequencyFromSystemProperties: Long =
+
     System.getProperty("spark.storage.blockManagerTimeoutIntervalMs", "60000").toLong / 4
 
   def getDisableHeartBeatsForTesting: Boolean =
@@ -924,4 +925,3 @@ private[spark] object BlockManager extends Logging {
     blockIdsToBlockManagers(blockIds, env, blockManagerMaster).mapValues(s => s.map(_.host))
   }
 }
-

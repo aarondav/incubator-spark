@@ -99,10 +99,12 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <java.version>1.5</java.version>
-    <scala.version>2.9.3</scala.version>
+    <java.version>1.6</java.version>
+
+    <scala-short.version>2.10</scala-short.version>
+    <scala.version>2.10.3</scala.version>
     <mesos.version>0.13.0</mesos.version>
-    <akka.version>2.0.5</akka.version>
+    <akka.version>2.2.1</akka.version>
     <slf4j.version>1.7.2</slf4j.version>
     <log4j.version>1.2.17</log4j.version>
     <hadoop.version>1.0.4</hadoop.version>
@@ -115,9 +117,9 @@
 
   <repositories>
     <repository>
-      <id>jboss-repo</id>
-      <name>JBoss Repository</name>
-      <url>http://repository.jboss.org/nexus/content/repositories/releases/</url>
+      <id>typesafe-repo</id>
+      <name>Typesafe Repository</name>
+      <url>http://repo.typesafe.com/typesafe/releases/</url>
       <releases>
         <enabled>true</enabled>
       </releases>
@@ -126,9 +128,9 @@
       </snapshots>
     </repository>
     <repository>
-      <id>cloudera-repo</id>
-      <name>Cloudera Repository</name>
-      <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
+      <id>jboss-repo</id>
+      <name>JBoss Repository</name>
+      <url>http://repository.jboss.org/nexus/content/repositories/releases/</url>
       <releases>
         <enabled>true</enabled>
       </releases>
@@ -249,7 +251,7 @@
       </dependency>
       <dependency>
         <groupId>com.twitter</groupId>
-        <artifactId>chill_2.9.3</artifactId>
+        <artifactId>chill_${scala-short.version}</artifactId>
         <version>0.3.1</version>
       </dependency>
       <dependency>
@@ -257,6 +259,7 @@
         <artifactId>chill-java</artifactId>
         <version>0.3.1</version>
       </dependency>
+        <!-- FIXME: Merge @ScrapCodes -->
       <dependency>
         <groupId>com.typesafe.akka</groupId>
         <artifactId>akka-actor</artifactId>
@@ -270,7 +273,7 @@
       </dependency>
       <dependency>
         <groupId>com.typesafe.akka</groupId>
-        <artifactId>akka-remote</artifactId>
+        <artifactId>akka-remote_${scala-short.version}</artifactId>
         <version>${akka.version}</version>
         <exclusions>
           <exclusion>
@@ -281,7 +284,7 @@
       </dependency>
       <dependency>
         <groupId>com.typesafe.akka</groupId>
-        <artifactId>akka-slf4j</artifactId>
+        <artifactId>akka-slf4j_${scala-short.version}</artifactId>
         <version>${akka.version}</version>
         <exclusions>
           <exclusion>
@@ -302,7 +305,7 @@
       </dependency>
       <dependency>
         <groupId>com.github.scala-incubator.io</groupId>
-        <artifactId>scala-io-file_2.9.2</artifactId>
+        <artifactId>scala-io-file_${scala-short.version}</artifactId>
         <version>0.4.1</version>
       </dependency>
       <dependency>
@@ -313,7 +316,7 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
-        <version>4.0.0.Beta2</version>
+        <version>4.0.0.CR1</version>
       </dependency>
       <dependency>
         <groupId>org.apache.derby</groupId>
@@ -323,8 +326,14 @@
       </dependency>
       <dependency>
         <groupId>net.liftweb</groupId>
-        <artifactId>lift-json_2.9.2</artifactId>
-        <version>2.5</version>
+        <artifactId>lift-json_${scala-short.version}</artifactId>
+        <version>2.5.1</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scalap</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>com.codahale.metrics</groupId>
@@ -362,22 +371,20 @@
         <version>${scala.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.scala-lang</groupId>
-        <artifactId>scalap</artifactId>
-        <version>${scala.version}</version>
-      </dependency>
-
-      <dependency>
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>
         <version>${log4j.version}</version>
       </dependency>
-
       <dependency>
         <groupId>org.scalatest</groupId>
-        <artifactId>scalatest_2.9.3</artifactId>
+        <artifactId>scalatest_${scala-short.version}</artifactId>
         <version>1.9.1</version>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>commons-io</groupId>
+        <artifactId>commons-io</artifactId>
+        <version>2.4</version>
       </dependency>
       <dependency>
         <groupId>org.easymock</groupId>
@@ -393,7 +400,7 @@
       </dependency>
       <dependency>
         <groupId>org.scalacheck</groupId>
-        <artifactId>scalacheck_2.9.3</artifactId>
+        <artifactId>scalacheck_${scala-short.version}</artifactId>
         <version>1.10.0</version>
         <scope>test</scope>
       </dependency>

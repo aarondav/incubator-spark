@@ -21,15 +21,16 @@ import java.util.Date
 import java.text.SimpleDateFormat
 
 import scala.collection.mutable.{ArrayBuffer, HashMap, HashSet}
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 import akka.actor._
-import akka.actor.Terminated
-import akka.dispatch.Await
 import akka.pattern.ask
 import akka.remote.{RemoteClientLifeCycleEvent, RemoteClientDisconnected, RemoteClientShutdown}
 import akka.serialization.SerializationExtension
 import akka.util.duration._
 import akka.util.{Duration, Timeout}
+import akka.remote._
 
 import org.apache.spark.{Logging, SparkException}
 import org.apache.spark.deploy.{ApplicationDescription, ExecutorState}
@@ -38,6 +39,14 @@ import org.apache.spark.deploy.master.MasterMessages._
 import org.apache.spark.deploy.master.ui.MasterWebUI
 import org.apache.spark.metrics.MetricsSystem
 import org.apache.spark.util.{AkkaUtils, Utils}
+import org.apache.spark.util.{Utils, AkkaUtils}
+import akka.util.Timeout
+import org.apache.spark.deploy.DeployMessages.RegisterWorkerFailed
+import org.apache.spark.deploy.DeployMessages.KillExecutor
+import org.apache.spark.deploy.DeployMessages.ExecutorStateChanged
+import scala.Some
+import akka.actor.Terminated
+
 
 private[spark] class Master(host: String, port: Int, webUiPort: Int) extends Actor with Logging {
   val DATE_FORMAT = new SimpleDateFormat("yyyyMMddHHmmss")  // For application IDs
@@ -93,9 +102,11 @@ private[spark] class Master(host: String, port: Int, webUiPort: Int) extends Act
   override def preStart() {
     logInfo("Starting Spark master at " + masterUrl)
     // Listen for remote client disconnection events, since they don't go through Akka's watch()
-    context.system.eventStream.subscribe(self, classOf[RemoteClientLifeCycleEvent])
+    context.system.eventStream.subscribe(self, classOf[RemotingLifecycleEvent])
     webUi.start()
+    // FIXME: Merge @ScrapCodes
     masterWebUiUrl = "http://" + masterPublicAddress + ":" + webUi.boundPort.get
+    import context.dispatcher
     context.system.scheduler.schedule(0 millis, WORKER_TIMEOUT millis, self, CheckForWorkerTimeOut)
 
     masterMetricsSystem.registerSource(masterSource)
@@ -265,14 +276,14 @@ private[spark] class Master(host: String, port: Int, webUiPort: Int) extends Act
       if (state == RecoveryState.RECOVERING && canCompleteRecovery) { completeRecovery() }
     }
 
-    case RemoteClientDisconnected(transport, address) => {
+    case DisassociatedEvent(_, address, _) => {
       // The disconnected client could've been either a worker or an app; remove whichever it was
       addressToWorker.get(address).foreach(removeWorker)
       addressToApp.get(address).foreach(finishApplication)
       if (state == RecoveryState.RECOVERING && canCompleteRecovery) { completeRecovery() }
     }
 
-    case RemoteClientShutdown(transport, address) => {
+    case AssociationErrorEvent(_, _, address, _) => {
       // The disconnected client could've been either a worker or an app; remove whichever it was
       addressToWorker.get(address).foreach(removeWorker)
       addressToApp.get(address).foreach(finishApplication)
@@ -540,11 +551,11 @@ private[spark] object Master {
     actorSystem.awaitTermination()
   }
 
-  /** Returns an `akka://...` URL for the Master actor given a sparkUrl `spark://host:ip`. */
+  /** Returns an `akka.tcp://...` URL for the Master actor given a sparkUrl `spark://host:ip`. */
   def toAkkaUrl(sparkUrl: String): String = {
     sparkUrl match {
       case sparkUrlRegex(host, port) =>
-        "akka://%s@%s:%s/user/%s".format(systemName, host, port, actorName)
+        "akka.tcp://%s@%s:%s/user/%s".format(systemName, host, port, actorName)
       case _ =>
         throw new SparkException("Invalid master URL: " + sparkUrl)
     }
@@ -552,7 +563,7 @@ private[spark] object Master {
 
   def startSystemAndActor(host: String, port: Int, webUiPort: Int): (ActorSystem, Int, Int) = {
     val (actorSystem, boundPort) = AkkaUtils.createActorSystem(systemName, host, port)
-    val actor = actorSystem.actorOf(Props(new Master(host, boundPort, webUiPort)), name = actorName)
+    val actor = actorSystem.actorOf(Props(classOf[Master], host, boundPort, webUiPort), name = actorName)
     val timeoutDuration = Duration.create(
       System.getProperty("spark.akka.askTimeout", "10").toLong, "seconds")
     implicit val timeout = Timeout(timeoutDuration)

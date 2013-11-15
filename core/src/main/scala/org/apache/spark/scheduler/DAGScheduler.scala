@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import akka.actor._
 import akka.util.duration._
 import scala.collection.mutable.{ArrayBuffer, HashMap, HashSet, Map}
+import scala.reflect.ClassTag
 
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
@@ -290,7 +291,7 @@ class DAGScheduler(
    * Submit a job to the job scheduler and get a JobWaiter object back. The JobWaiter object
    * can be used to block until the the job finishes executing or can be used to cancel the job.
    */
-  def submitJob[T, U](
+  def submitJob[T, U: ClassTag](
       rdd: RDD[T],
       func: (TaskContext, Iterator[T]) => U,
       partitions: Seq[Int],
@@ -319,7 +320,7 @@ class DAGScheduler(
     waiter
   }
 
-  def runJob[T, U: ClassManifest](
+  def runJob[T, U: ClassTag](
       rdd: RDD[T],
       func: (TaskContext, Iterator[T]) => U,
       partitions: Seq[Int],

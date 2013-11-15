@@ -23,10 +23,14 @@ import java.util.zip.{GZIPInputStream, GZIPOutputStream}
 import scala.collection.mutable.HashSet
 
 import akka.actor._
-import akka.dispatch._
+import scala.concurrent.Await
 import akka.pattern.ask
 import akka.util.Duration
+import akka.remote._
 
+import scala.concurrent.duration.Duration
+import akka.util.Timeout
+import scala.concurrent.duration._
 
 import org.apache.spark.scheduler.MapStatus
 import org.apache.spark.storage.BlockManagerId
@@ -55,7 +59,7 @@ private[spark] class MapOutputTrackerMasterActor(tracker: MapOutputTrackerMaster
 private[spark] class MapOutputTracker extends Logging {
 
   private val timeout = Duration.create(System.getProperty("spark.akka.askTimeout", "10").toLong, "seconds")
-  
+
   // Set to the MapOutputTrackerActor living on the driver
   var trackerActor: ActorRef = _
 
@@ -117,7 +121,7 @@ private[spark] class MapOutputTracker extends Logging {
           fetching += shuffleId
         }
       }
-      
+
       if (fetchedStatuses == null) {
         // We won the race to fetch the output locs; do so
         logInfo("Doing the fetch; tracker actor = " + trackerActor)
@@ -144,7 +148,7 @@ private[spark] class MapOutputTracker extends Logging {
       else{
         throw new FetchFailedException(null, shuffleId, -1, reduceId,
           new Exception("Missing all output locations for shuffle " + shuffleId))
-      }      
+      }
     } else {
       statuses.synchronized {
         return MapOutputTracker.convertMapStatuses(shuffleId, reduceId, statuses)
@@ -296,7 +300,15 @@ private[spark] object MapOutputTracker {
   // Opposite of serializeMapStatuses.
   def deserializeMapStatuses(bytes: Array[Byte]): Array[MapStatus] = {
     val objIn = new ObjectInputStream(new GZIPInputStream(new ByteArrayInputStream(bytes)))
+<<<<<<< HEAD
     objIn.readObject().asInstanceOf[Array[MapStatus]]
+=======
+    // FIXME: Merge @mridulm - the following is self-contradictory.
+    objIn.readObject().
+      // // drop all null's from status - not sure why they are occuring though. Causes NPE downstream in slave if present
+      // comment this out - nulls could be due to missing location ?
+      asInstanceOf[Array[MapStatus]] // .filter( _ != null )
+>>>>>>> source/scala-2.10
   }
 
   // Convert an array of MapStatuses to locations and sizes for a given reduce ID. If
@@ -308,7 +320,7 @@ private[spark] object MapOutputTracker {
         statuses: Array[MapStatus]): Array[(BlockManagerId, Long)] = {
     assert (statuses != null)
     statuses.map {
-      status => 
+      status =>
         if (status == null) {
           throw new FetchFailedException(null, shuffleId, -1, reduceId,
             new Exception("Missing an output location for shuffle " + shuffleId))

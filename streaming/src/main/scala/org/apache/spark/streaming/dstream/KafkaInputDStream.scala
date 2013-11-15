@@ -31,22 +31,30 @@ import kafka.utils.ZKStringSerializer
 import org.I0Itec.zkclient._
 
 import scala.collection.Map
-
+// FIXME: Merge cleanup imports
+import scala.collection.mutable.HashMap
+import scala.collection.JavaConversions._
+import scala.reflect.ClassTag
 
 /**
  * Input stream that pulls messages from a Kafka Broker.
- * 
+ *
  * @param kafkaParams Map of kafka configuration paramaters. See: http://kafka.apache.org/configuration.html
  * @param topics Map of (topic_name -> numPartitions) to consume. Each partition is consumed
  * in its own thread.
  * @param storageLevel RDD storage level.
  */
 private[streaming]
+<<<<<<< HEAD
+// FIXME: Merge @jerryshao Please help merge the kafka stuff
 class KafkaInputDStream[
   K: ClassManifest,
   V: ClassManifest,
   U <: Decoder[_]: Manifest,
   T <: Decoder[_]: Manifest](
+=======
+class KafkaInputDStream[T: ClassTag, D <: Decoder[_]: Manifest](
+>>>>>>> source/scala-2.10
     @transient ssc_ : StreamingContext,
     kafkaParams: Map[String, String],
     topics: Map[String, Int],
@@ -60,6 +68,7 @@ class KafkaInputDStream[
 }
 
 private[streaming]
+<<<<<<< HEAD
 class KafkaReceiver[
   K: ClassManifest,
   V: ClassManifest,
@@ -68,6 +77,12 @@ class KafkaReceiver[
     kafkaParams: Map[String, String],
     topics: Map[String, Int],
     storageLevel: StorageLevel
+=======
+class KafkaReceiver[T: ClassTag, D <: Decoder[_]: Manifest](
+  kafkaParams: Map[String, String],
+  topics: Map[String, Int],
+  storageLevel: StorageLevel
+>>>>>>> source/scala-2.10
   ) extends NetworkReceiver[Any] {
 
   // Handles pushing data into the BlockManager
@@ -105,6 +120,7 @@ class KafkaReceiver[
     }
 
     // Create Threads for each Topic/Message Stream we are listening
+<<<<<<< HEAD
     val keyDecoder = manifest[U].erasure.getConstructor(classOf[VerifiableProperties])
       .newInstance(consumerConfig.props)
       .asInstanceOf[Decoder[K]]
@@ -114,6 +130,10 @@ class KafkaReceiver[
 
     val topicMessageStreams = consumerConnector.createMessageStreams(
       topics, keyDecoder, valueDecoder)
+=======
+    val decoder = manifest[D].runtimeClass.newInstance.asInstanceOf[Decoder[T]]
+    val topicMessageStreams = consumerConnector.createMessageStreams(topics, decoder)
+>>>>>>> source/scala-2.10
 
     // Start the messages handler for each partition
     topicMessageStreams.values.foreach { streams =>
@@ -122,8 +142,12 @@ class KafkaReceiver[
   }
 
   // Handles Kafka Messages
+<<<<<<< HEAD
   private class MessageHandler[K: ClassManifest, V: ClassManifest](stream: KafkaStream[K, V])
     extends Runnable {
+=======
+  private class MessageHandler[T: ClassTag](stream: KafkaStream[T]) extends Runnable {
+>>>>>>> source/scala-2.10
     def run() {
       logInfo("Starting MessageHandler.")
       for (msgAndMetadata <- stream) {
@@ -146,7 +170,7 @@ class KafkaReceiver[
       zk.deleteRecursive(dir)
       zk.close()
     } catch {
-      case _ => // swallow
+      case _ : Throwable => // swallow
     }
   }
 }

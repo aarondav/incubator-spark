@@ -21,7 +21,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.io.File
 
+// FIXME: Merge clean imports
 import scala.collection.mutable.HashMap
+import scala.concurrent.duration._
 
 import akka.actor._
 import akka.remote.{RemoteClientLifeCycleEvent, RemoteClientShutdown, RemoteClientDisconnected}
@@ -29,6 +31,11 @@ import akka.util.duration._
 
 import org.apache.spark.Logging
 import org.apache.spark.deploy.{ExecutorDescription, ExecutorState}
+import akka.actor.{ActorRef, Props, Actor, ActorSystem, Terminated}
+import akka.remote.{RemotingLifecycleEvent, AssociationErrorEvent, DisassociatedEvent}
+
+import org.apache.spark.Logging
+import org.apache.spark.deploy.ExecutorState
 import org.apache.spark.deploy.DeployMessages._
 import org.apache.spark.deploy.master.Master
 import org.apache.spark.deploy.worker.ui.WorkerWebUI
@@ -127,7 +134,8 @@ private[spark] class Worker(
       activeMasterUrl = url
       activeMasterWebUiUrl = uiUrl
       master = context.actorFor(Master.toAkkaUrl(activeMasterUrl))
-      context.system.eventStream.subscribe(self, classOf[RemoteClientLifeCycleEvent])
+      // FIXME: Merge @ScrapCodes
+      context.system.eventStream.subscribe(self, classOf[RemotingLifecycleEvent])
       context.watch(master) // Doesn't work with remote actors, but useful for testing
       connected = true
     }
@@ -160,6 +168,8 @@ private[spark] class Worker(
       }
     retryTimer // start timer
   }
+
+  import context.dispatcher
 
   override def receive = {
     case RegisteredWorker(masterUrl, masterWebUiUrl) =>
@@ -234,13 +244,14 @@ private[spark] class Worker(
         }
       }
 
+        // FIXME: Merge @ScrapCodes
     case Terminated(actor_) if actor_ == master =>
       masterDisconnected()
 
-    case RemoteClientDisconnected(transport, address) if address == master.path.address =>
+    case DisassociatedEvent(transport, address) if address == master.path.address =>
       masterDisconnected()
 
-    case RemoteClientShutdown(transport, address) if address == master.path.address =>
+    case AssociationErrorEvent(transport, address) if address == master.path.address =>
       masterDisconnected()
 
     case RequestWorkerState => {
@@ -280,8 +291,8 @@ private[spark] object Worker {
     // The LocalSparkCluster runs multiple local sparkWorkerX actor systems
     val systemName = "sparkWorker" + workerNumber.map(_.toString).getOrElse("")
     val (actorSystem, boundPort) = AkkaUtils.createActorSystem(systemName, host, port)
-    val actor = actorSystem.actorOf(Props(new Worker(host, boundPort, webUiPort, cores, memory,
-      masterUrls, workDir)), name = "Worker")
+    actorSystem.actorOf(Props(classOf[Worker], host, boundPort, webUiPort, cores, memory,
+      masterUrls, workDir), name = "Worker")
     (actorSystem, boundPort)
   }
 

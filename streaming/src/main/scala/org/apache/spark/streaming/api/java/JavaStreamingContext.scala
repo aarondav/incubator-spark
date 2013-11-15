@@ -22,12 +22,15 @@ import java.io.InputStream
 import java.util.{Map => JMap, List => JList}
 
 import scala.collection.JavaConversions._
+import scala.reflect.ClassTag
 
 import org.apache.hadoop.mapreduce.{InputFormat => NewInputFormat}
 import twitter4j.Status
 import akka.actor.Props
 import akka.actor.SupervisorStrategy
 import akka.zeromq.Subscribe
+import akka.util.ByteString
+
 import twitter4j.auth.Authorization
 
 import org.apache.spark.rdd.RDD
@@ -142,10 +145,11 @@ class JavaStreamingContext(val ssc: StreamingContext) {
     groupId: String,
     topics: JMap[String, JInt])
   : JavaPairDStream[String, String] = {
-    implicit val cmt: ClassManifest[String] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[String]]
+    implicit val cmt: ClassTag[String] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[String]]
     ssc.kafkaStream(zkQuorum, groupId, Map(topics.mapValues(_.intValue()).toSeq: _*),
       StorageLevel.MEMORY_ONLY_SER_2)
+
   }
 
   /**
@@ -163,8 +167,8 @@ class JavaStreamingContext(val ssc: StreamingContext) {
     topics: JMap[String, JInt],
     storageLevel: StorageLevel)
   : JavaPairDStream[String, String] = {
-    implicit val cmt: ClassManifest[String] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[String]]
+    implicit val cmt: ClassTag[String] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[String]]
     ssc.kafkaStream(zkQuorum, groupId, Map(topics.mapValues(_.intValue()).toSeq: _*),
       storageLevel)
   }
@@ -189,6 +193,9 @@ class JavaStreamingContext(val ssc: StreamingContext) {
     kafkaParams: JMap[String, String],
     topics: JMap[String, JInt],
     storageLevel: StorageLevel)
+<<<<<<< HEAD
+
+  // FIXME: Merge @jerryshao Please help merge the kafka stuff
   : JavaPairDStream[K, V] = {
     implicit val keyCmt: ClassManifest[K] =
       implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[K]]
@@ -199,6 +206,13 @@ class JavaStreamingContext(val ssc: StreamingContext) {
     implicit val valueCmd: Manifest[T] = implicitly[Manifest[AnyRef]].asInstanceOf[Manifest[T]]
 
     ssc.kafkaStream[K, V, U, T](
+=======
+  : JavaDStream[T] = {
+    implicit val cmt: ClassTag[T] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[T]]
+    implicit val cmd: Manifest[D] = implicitly[Manifest[AnyRef]].asInstanceOf[Manifest[D]]
+    ssc.kafkaStream[T, D](
+>>>>>>> source/scala-2.10
       kafkaParams.toMap,
       Map(topics.mapValues(_.intValue()).toSeq: _*),
       storageLevel)
@@ -246,8 +260,8 @@ class JavaStreamingContext(val ssc: StreamingContext) {
       storageLevel: StorageLevel)
   : JavaDStream[T] = {
     def fn = (x: InputStream) => converter.apply(x).toIterator
-    implicit val cmt: ClassManifest[T] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[T]]
+    implicit val cmt: ClassTag[T] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[T]]
     ssc.socketStream(hostname, port, fn, storageLevel)
   }
 
@@ -275,8 +289,8 @@ class JavaStreamingContext(val ssc: StreamingContext) {
       hostname: String,
       port: Int,
       storageLevel: StorageLevel): JavaDStream[T] = {
-    implicit val cmt: ClassManifest[T] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[T]]
+    implicit val cmt: ClassTag[T] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[T]]
     JavaDStream.fromDStream(ssc.rawSocketStream(hostname, port, storageLevel))
   }
 
@@ -290,8 +304,8 @@ class JavaStreamingContext(val ssc: StreamingContext) {
    * @tparam T            Type of the objects in the received blocks
    */
   def rawSocketStream[T](hostname: String, port: Int): JavaDStream[T] = {
-    implicit val cmt: ClassManifest[T] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[T]]
+    implicit val cmt: ClassTag[T] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[T]]
     JavaDStream.fromDStream(ssc.rawSocketStream(hostname, port))
   }
 
@@ -305,12 +319,12 @@ class JavaStreamingContext(val ssc: StreamingContext) {
    * @tparam F Input format for reading HDFS file
    */
   def fileStream[K, V, F <: NewInputFormat[K, V]](directory: String): JavaPairDStream[K, V] = {
-    implicit val cmk: ClassManifest[K] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[K]]
-    implicit val cmv: ClassManifest[V] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[V]]
-    implicit val cmf: ClassManifest[F] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[F]]
+    implicit val cmk: ClassTag[K] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[K]]
+    implicit val cmv: ClassTag[V] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[V]]
+    implicit val cmf: ClassTag[F] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[F]]
     ssc.fileStream[K, V, F](directory);
   }
 
@@ -405,7 +419,7 @@ class JavaStreamingContext(val ssc: StreamingContext) {
   def twitterStream(): JavaDStream[Status] = {
     ssc.twitterStream()
   }
-  
+
   /**
    * Create an input stream with any arbitrary user implemented actor receiver.
    * @param props Props object defining creation of the actor
@@ -423,8 +437,8 @@ class JavaStreamingContext(val ssc: StreamingContext) {
       storageLevel: StorageLevel,
       supervisorStrategy: SupervisorStrategy
     ): JavaDStream[T] = {
-    implicit val cm: ClassManifest[T] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[T]]
+    implicit val cm: ClassTag[T] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[T]]
     ssc.actorStream[T](props, name, storageLevel, supervisorStrategy)
   }
 
@@ -444,8 +458,8 @@ class JavaStreamingContext(val ssc: StreamingContext) {
       name: String,
       storageLevel: StorageLevel
   ): JavaDStream[T] = {
-    implicit val cm: ClassManifest[T] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[T]]
+    implicit val cm: ClassTag[T] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[T]]
     ssc.actorStream[T](props, name, storageLevel)
   }
 
@@ -463,8 +477,8 @@ class JavaStreamingContext(val ssc: StreamingContext) {
       props: Props,
       name: String
     ): JavaDStream[T] = {
-    implicit val cm: ClassManifest[T] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[T]]
+    implicit val cm: ClassTag[T] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[T]]
     ssc.actorStream[T](props, name)
   }
 
@@ -481,12 +495,12 @@ class JavaStreamingContext(val ssc: StreamingContext) {
   def zeroMQStream[T](
       publisherUrl:String,
       subscribe: Subscribe,
-      bytesToObjects: Seq[Seq[Byte]] ⇒ Iterator[T],
+      bytesToObjects: Seq[ByteString] ⇒ Iterator[T],
       storageLevel: StorageLevel,
       supervisorStrategy: SupervisorStrategy
     ): JavaDStream[T] = {
-    implicit val cm: ClassManifest[T] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[T]]
+    implicit val cm: ClassTag[T] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[T]]
     ssc.zeroMQStream[T](publisherUrl, subscribe, bytesToObjects, storageLevel, supervisorStrategy)
   }
 
@@ -506,9 +520,9 @@ class JavaStreamingContext(val ssc: StreamingContext) {
       bytesToObjects: JFunction[Array[Array[Byte]], java.lang.Iterable[T]],
       storageLevel: StorageLevel
     ): JavaDStream[T] = {
-    implicit val cm: ClassManifest[T] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[T]]
-    def fn(x: Seq[Seq[Byte]]) = bytesToObjects.apply(x.map(_.toArray).toArray).toIterator
+    implicit val cm: ClassTag[T] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[T]]
+    def fn(x: Seq[ByteString]) = bytesToObjects.apply(x.map(_.toArray).toArray).toIterator
     ssc.zeroMQStream[T](publisherUrl, subscribe, fn, storageLevel)
   }
 
@@ -526,9 +540,9 @@ class JavaStreamingContext(val ssc: StreamingContext) {
       subscribe: Subscribe,
       bytesToObjects: JFunction[Array[Array[Byte]], java.lang.Iterable[T]]
     ): JavaDStream[T] = {
-    implicit val cm: ClassManifest[T] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[T]]
-    def fn(x: Seq[Seq[Byte]]) = bytesToObjects.apply(x.map(_.toArray).toArray).toIterator
+    implicit val cm: ClassTag[T] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[T]]
+    def fn(x: Seq[ByteString]) = bytesToObjects.apply(x.map(_.toArray).toArray).toIterator
     ssc.zeroMQStream[T](publisherUrl, subscribe, fn)
   }
 
@@ -548,8 +562,8 @@ class JavaStreamingContext(val ssc: StreamingContext) {
    * @tparam T         Type of objects in the RDD
    */
   def queueStream[T](queue: java.util.Queue[JavaRDD[T]]): JavaDStream[T] = {
-    implicit val cm: ClassManifest[T] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[T]]
+    implicit val cm: ClassTag[T] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[T]]
     val sQueue = new scala.collection.mutable.Queue[RDD[T]]
     sQueue.enqueue(queue.map(_.rdd).toSeq: _*)
     ssc.queueStream(sQueue)
@@ -565,8 +579,8 @@ class JavaStreamingContext(val ssc: StreamingContext) {
    * @tparam T         Type of objects in the RDD
    */
   def queueStream[T](queue: java.util.Queue[JavaRDD[T]], oneAtATime: Boolean): JavaDStream[T] = {
-    implicit val cm: ClassManifest[T] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[T]]
+    implicit val cm: ClassTag[T] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[T]]
     val sQueue = new scala.collection.mutable.Queue[RDD[T]]
     sQueue.enqueue(queue.map(_.rdd).toSeq: _*)
     ssc.queueStream(sQueue, oneAtATime)
@@ -586,8 +600,8 @@ class JavaStreamingContext(val ssc: StreamingContext) {
       queue: java.util.Queue[JavaRDD[T]],
       oneAtATime: Boolean,
       defaultRDD: JavaRDD[T]): JavaDStream[T] = {
-    implicit val cm: ClassManifest[T] =
-      implicitly[ClassManifest[AnyRef]].asInstanceOf[ClassManifest[T]]
+    implicit val cm: ClassTag[T] =
+      implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[T]]
     val sQueue = new scala.collection.mutable.Queue[RDD[T]]
     sQueue.enqueue(queue.map(_.rdd).toSeq: _*)
     ssc.queueStream(sQueue, oneAtATime, defaultRDD.rdd)

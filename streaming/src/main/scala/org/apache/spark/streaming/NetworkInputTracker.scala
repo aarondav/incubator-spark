@@ -26,11 +26,13 @@ import org.apache.spark.SparkContext._
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.Queue
 
+// FIXME: Merge cleanup imports
 import akka.actor._
 import akka.pattern.ask
 import akka.util.duration._
 import akka.dispatch._
 import org.apache.spark.storage.BlockId
+import scala.concurrent.duration._
 
 private[streaming] sealed trait NetworkInputTrackerMessage
 private[streaming] case class RegisterReceiver(streamId: Int, receiverActor: ActorRef) extends NetworkInputTrackerMessage

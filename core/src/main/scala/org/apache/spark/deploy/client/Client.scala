@@ -19,15 +19,20 @@ package org.apache.spark.deploy.client
 
 import java.util.concurrent.TimeoutException
 
+import scala.concurrent.duration._
+import scala.concurrent.Await
+
+// FIXME: Merge clean imports
 import akka.actor._
 import akka.actor.Terminated
+import akka.pattern.AskTimeoutException
 import akka.pattern.ask
 import akka.util.Duration
 import akka.util.duration._
 import akka.remote.RemoteClientDisconnected
-import akka.remote.RemoteClientLifeCycleEvent
 import akka.remote.RemoteClientShutdown
 import akka.dispatch.Await
+import akka.remote.{RemotingLifecycleEvent, DisassociatedEvent, AssociationErrorEvent}
 
 import org.apache.spark.Logging
 import org.apache.spark.deploy.{ApplicationDescription, ExecutorState}
@@ -104,7 +109,7 @@ private[spark] class Client(
       activeMasterUrl = url
       master = context.actorFor(Master.toAkkaUrl(url))
       masterAddress = master.path.address
-      context.system.eventStream.subscribe(self, classOf[RemoteClientLifeCycleEvent])
+      context.system.eventStream.subscribe(self, classOf[RemotingLifecycleEvent])
       context.watch(master)  // Doesn't work with remote actors, but useful for testing
     }
 
@@ -144,11 +149,12 @@ private[spark] class Client(
         logWarning("Connection to master failed; waiting for master to reconnect...")
         markDisconnected()
 
-      case RemoteClientDisconnected(transport, address) if address == masterAddress =>
+      // FIXME: Merge @ScrapCodes
+      case DisassociatedEvent(_, address, _) if address == masterAddress =>
         logWarning("Connection to master failed; waiting for master to reconnect...")
         markDisconnected()
 
-      case RemoteClientShutdown(transport, address) if address == masterAddress =>
+      case AssociationErrorEvent(_, _, address, _) if address == masterAddress =>
         logWarning("Connection to master failed; waiting for master to reconnect...")
         markDisconnected()
 

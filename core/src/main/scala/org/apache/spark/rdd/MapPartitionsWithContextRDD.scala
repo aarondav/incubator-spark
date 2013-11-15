@@ -18,6 +18,7 @@
 package org.apache.spark.rdd
 
 import org.apache.spark.{Partition, TaskContext}
+import scala.reflect.ClassTag
 
 
 /**
@@ -26,7 +27,7 @@ import org.apache.spark.{Partition, TaskContext}
  * of the partition in the RDD.
  */
 private[spark]
-class MapPartitionsWithContextRDD[U: ClassManifest, T: ClassManifest](
+class MapPartitionsWithContextRDD[U: ClassTag, T: ClassTag](
     prev: RDD[T],
     f: (TaskContext, Iterator[T]) => Iterator[U],
     preservesPartitioning: Boolean

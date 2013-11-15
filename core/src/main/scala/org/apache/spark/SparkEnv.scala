@@ -74,7 +74,8 @@ class SparkEnv (
     actorSystem.shutdown()
     // Unfortunately Akka's awaitTermination doesn't actually wait for the Netty server to shut
     // down, but let's call it anyway in case it gets fixed in a later release
-    actorSystem.awaitTermination()
+    // UPDATE: In Akka 2.1.x, this hangs if there are remote actors, so we can't call it.
+    //actorSystem.awaitTermination()
   }
 
   def createPythonWorker(pythonExec: String, envVars: Map[String, String]): java.net.Socket = {
@@ -159,7 +160,7 @@ object SparkEnv extends Logging {
         val driverHost: String = System.getProperty("spark.driver.host", "localhost")
         val driverPort: Int = System.getProperty("spark.driver.port", "7077").toInt
         Utils.checkHost(driverHost, "Expected hostname")
-        val url = "akka://spark@%s:%s/user/%s".format(driverHost, driverPort, name)
+        val url = "akka.tcp://spark@%s:%s/user/%s".format(driverHost, driverPort, name)
         logInfo("Connecting to " + name + ": " + url)
         actorSystem.actorFor(url)
       }

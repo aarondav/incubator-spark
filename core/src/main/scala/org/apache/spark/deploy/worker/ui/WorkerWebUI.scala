@@ -17,7 +17,10 @@
 
 package org.apache.spark.deploy.worker.ui
 
-import akka.util.{Duration, Timeout}
+import akka.actor.ActorRef
+import akka.util.Timeout
+
+import scala.concurrent.duration._
 
 import java.io.{FileInputStream, File}
 

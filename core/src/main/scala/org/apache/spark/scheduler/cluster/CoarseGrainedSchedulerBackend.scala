@@ -20,13 +20,12 @@ package org.apache.spark.scheduler.cluster
 import java.util.concurrent.atomic.AtomicInteger
 
 import scala.collection.mutable.{ArrayBuffer, HashMap, HashSet}
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 import akka.actor._
-import akka.dispatch.Await
 import akka.pattern.ask
-import akka.remote.{RemoteClientShutdown, RemoteClientDisconnected, RemoteClientLifeCycleEvent}
-import akka.util.Duration
-import akka.util.duration._
+import akka.remote.{AssociationErrorEvent, DisassociatedEvent, RemotingLifecycleEvent}
 
 import org.apache.spark.{SparkException, Logging, TaskState}
 import org.apache.spark.scheduler.TaskDescription
@@ -58,10 +57,11 @@ class CoarseGrainedSchedulerBackend(scheduler: ClusterScheduler, actorSystem: Ac
 
     override def preStart() {
       // Listen for remote client disconnection events, since they don't go through Akka's watch()
-      context.system.eventStream.subscribe(self, classOf[RemoteClientLifeCycleEvent])
+      context.system.eventStream.subscribe(self, classOf[RemotingLifecycleEvent])
 
       // Periodically revive offers to allow delay scheduling to work
       val reviveInterval = System.getProperty("spark.scheduler.revive.interval", "1000").toLong
+      import context.dispatcher
       context.system.scheduler.schedule(0.millis, reviveInterval.millis, self, ReviveOffers)
     }
 
@@ -121,11 +121,11 @@ class CoarseGrainedSchedulerBackend(scheduler: ClusterScheduler, actorSystem: Ac
       case Terminated(actor) =>
         actorToExecutorId.get(actor).foreach(removeExecutor(_, "Akka actor terminated"))
 
-      case RemoteClientDisconnected(transport, address) =>
-        addressToExecutorId.get(address).foreach(removeExecutor(_, "remote Akka client disconnected"))
+      case DisassociatedEvent(_, remoteAddress, _) =>
+        addressToExecutorId.get(remoteAddress).foreach(removeExecutor(_, "remote Akka client disconnected"))
 
-      case RemoteClientShutdown(transport, address) =>
-        addressToExecutorId.get(address).foreach(removeExecutor(_, "remote Akka client shutdown"))
+      case AssociationErrorEvent(_, _, remoteAddress, _) =>
+        addressToExecutorId.get(remoteAddress).foreach(removeExecutor(_, "remote Akka client shutdown"))
     }
 
     // Make fake resource offers on all executors

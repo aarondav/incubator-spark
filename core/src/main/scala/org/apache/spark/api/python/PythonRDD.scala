@@ -22,6 +22,7 @@ import java.net._
 import java.util.{List => JList, ArrayList => JArrayList, Map => JMap, Collections}
 
 import scala.collection.JavaConversions._
+import scala.reflect.ClassTag
 
 import org.apache.spark.api.java.{JavaSparkContext, JavaPairRDD, JavaRDD}
 import org.apache.spark.broadcast.Broadcast
@@ -30,8 +31,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.rdd.PipedRDD
 import org.apache.spark.util.Utils
 
-
-private[spark] class PythonRDD[T: ClassManifest](
+private[spark] class PythonRDD[T: ClassTag](
     parent: RDD[T],
     command: Seq[String],
     envVars: JMap[String, String],
@@ -166,7 +166,7 @@ private[spark] class PythonRDD[T: ClassManifest](
           case eof: EOFException => {
             throw new SparkException("Python worker exited unexpectedly (crashed)", eof)
           }
-          case e => throw e
+          case e : Throwable => throw e
         }
       }
 
@@ -226,7 +226,7 @@ private[spark] object PythonRDD {
       val arr = elem.asInstanceOf[Array[Byte]]
       dOut.writeInt(arr.length)
       dOut.write(arr)
-    } else if (elem.isInstanceOf[scala.Tuple2[Array[Byte], Array[Byte]]]) {
+    } else if (elem.isInstanceOf[scala.Tuple2[_, _]]) {
       val t = elem.asInstanceOf[scala.Tuple2[Array[Byte], Array[Byte]]]
       val length = t._1.length + t._2.length - 3 - 3 + 4  // stripPickle() removes 3 bytes
       dOut.writeInt(length)
@@ -265,7 +265,7 @@ private[spark] object PythonRDD {
       }
     } catch {
       case eof: EOFException => {}
-      case e => throw e
+      case e : Throwable => throw e
     }
     JavaRDD.fromRDD(sc.sc.parallelize(objs, parallelism))
   }
@@ -284,7 +284,7 @@ private[spark] object PythonRDD {
   }
 
   def takePartition[T](rdd: RDD[T], partition: Int): Iterator[T] = {
-    implicit val cm : ClassManifest[T] = rdd.elementClassManifest
+    implicit val cm : ClassTag[T] = rdd.elementClassTag
     rdd.context.runJob(rdd, ((x: Iterator[T]) => x.toArray), Seq(partition), true).head.iterator
   }
 }
