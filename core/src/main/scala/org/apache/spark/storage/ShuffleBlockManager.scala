@@ -27,6 +27,7 @@ import org.apache.spark.serializer.Serializer
 import org.apache.spark.util.{MetadataCleanerType, MetadataCleaner, TimeStampedHashMap}
 import org.apache.spark.util.collection.{PrimitiveKeyOpenHashMap, PrimitiveVector}
 import org.apache.spark.storage.ShuffleBlockManager.ShuffleFileGroup
+import org.apache.spark.Logging
 
 /** A group of writers for a ShuffleMapTask, one writer per reducer. */
 private[spark] trait ShuffleWriterGroup {
@@ -58,7 +59,7 @@ private[spark] trait ShuffleWriterGroup {
  * files within a ShuffleFileGroups associated with the block's reducer.
  */
 private[spark]
-class ShuffleBlockManager(blockManager: BlockManager) {
+class ShuffleBlockManager(blockManager: BlockManager) extends Logging {
   // Turning off shuffle file consolidation causes all shuffle Blocks to get their own file.
   // TODO: Remove this once the shuffle file consolidation feature is stable.
   val consolidateShuffleFiles =
@@ -144,7 +145,10 @@ class ShuffleBlockManager(blockManager: BlockManager) {
     val shuffleState = shuffleStates(id.shuffleId)
     for (fileGroup <- shuffleState.allFileGroups) {
       val segment = fileGroup.getFileSegmentFor(id.mapId, id.reduceId)
-      if (segment.isDefined) { return segment.get }
+      if (segment.isDefined) {
+        logInfo("Returning segment for block " + id + ": " + segment)
+        return segment.get
+      }
     }
     throw new IllegalStateException("Failed to find shuffle block: " + id)
   }
