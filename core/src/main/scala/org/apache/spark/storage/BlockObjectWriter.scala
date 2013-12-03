@@ -23,7 +23,7 @@ import java.nio.channels.FileChannel
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream
 
 import org.apache.spark.Logging
-import org.apache.spark.serializer.{SerializationStream, Serializer}
+import org.apache.spark.serializer.{JavaSerializationStream, SerializationStream, Serializer}
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -129,6 +129,7 @@ class DiskBlockObjectWriter(
       bs = old.bs
       objOut = old.objOut
       initialized = true
+      objOut.asInstanceOf[JavaSerializationStream].objOut.reset()
     } else {
       fos = new FileOutputStream(file, true)
 //      ts = new TimeTrackingOutputStream(fos)

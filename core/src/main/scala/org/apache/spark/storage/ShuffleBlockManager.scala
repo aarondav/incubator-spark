@@ -141,17 +141,17 @@ class ShuffleBlockManager(blockManager: BlockManager) extends Logging {
    * an error condition if we don't find the expected block.
    */
   def getBlockLocation(id: ShuffleBlockId): FileSegment = {
-    if (BOWHolder.mappity.size() > 0) {
-      logInfo("Cleaning out all file writers!`.")
-      for (shuffleState <- shuffleStates.values; fileGroup <- shuffleState.allFileGroups; file <- fileGroup.files) {
-        if (BOWHolder.mappity.contains(file.getAbsolutePath)) {
-          BOWHolder.mappity.get(file.getAbsolutePath).closeForGood()
-        } else {
-          logWarning("well, damn, couldn't find " + id)
-        }
-      }
-      BOWHolder.mappity.clear()
-    }
+//    if (BOWHolder.mappity.size() > 0) {
+//      logInfo("Cleaning out all file writers!`.")
+//      for (shuffleState <- shuffleStates.values; fileGroup <- shuffleState.allFileGroups; file <- fileGroup.files) {
+//        if (BOWHolder.mappity.contains(file.getAbsolutePath)) {
+//          BOWHolder.mappity.get(file.getAbsolutePath).closeForGood()
+//        } else {
+//          logWarning("well, damn, couldn't find " + file.getAbsolutePath)
+//        }
+//      }
+//      BOWHolder.mappity.clear()
+//    }
 
     // Search all file groups associated with this shuffle.
     val shuffleState = shuffleStates(id.shuffleId)
