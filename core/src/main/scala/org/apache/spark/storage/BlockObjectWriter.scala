@@ -102,6 +102,7 @@ class DiskBlockObjectWriter(
   with Logging
 {
 
+
   private val syncWrites = System.getProperty("spark.shuffle.sync", "false").toBoolean
 
   /** The file channel, used for repositioning / truncating the file. */
@@ -161,6 +162,14 @@ class DiskBlockObjectWriter(
 //      ts = null
 //      objOut = null
     }
+  }
+
+  def closeForGood() {
+    objOut.close()
+    channel = null
+    bs = null
+    fos = null
+    objOut = null
   }
 
   override def isOpen: Boolean = _isOpen
