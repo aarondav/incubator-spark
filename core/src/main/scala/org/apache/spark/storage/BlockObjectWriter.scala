@@ -24,6 +24,7 @@ import it.unimi.dsi.fastutil.io.FastBufferedOutputStream
 
 import org.apache.spark.Logging
 import org.apache.spark.serializer.{SerializationStream, Serializer}
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * An interface for writing JVM objects to some underlying storage. This interface allows
@@ -68,6 +69,10 @@ abstract class BlockObjectWriter(val blockId: BlockId) {
   def timeWriting(): Long
 }
 
+object BOWHolder {
+  val mappity = new ConcurrentHashMap[String, DiskBlockObjectWriter]()
+}
+
 /** BlockObjectWriter which writes directly to a file on disk. Appends to the given file. */
 class DiskBlockObjectWriter(
     blockId: BlockId,
@@ -109,19 +114,34 @@ class DiskBlockObjectWriter(
   private var lastValidPosition = initialPosition
   private var initialized = false
   private var _timeWriting = 0L
+  private var _isOpen = false
 
   override def open(): BlockObjectWriter = {
-    fos = new FileOutputStream(file, true)
-    ts = new TimeTrackingOutputStream(fos)
-    channel = fos.getChannel()
-    lastValidPosition = initialPosition
-    bs = compressStream(new FastBufferedOutputStream(ts, bufferSize))
-    objOut = serializer.newInstance().serializeStream(bs)
-    initialized = true
+    _isOpen = true
+    if (BOWHolder.mappity.containsKey(file.getAbsolutePath)) {
+      val old = BOWHolder.mappity.get(file.getAbsolutePath)
+      fos = old.fos
+      ts = old.ts
+      channel = old.channel
+      lastValidPosition = initialPosition
+      bs = old.bs
+      objOut = old.objOut
+      initialized = true
+    } else {
+      fos = new FileOutputStream(file, true)
+      ts = new TimeTrackingOutputStream(fos)
+      channel = fos.getChannel()
+      lastValidPosition = initialPosition
+      bs = compressStream(new FastBufferedOutputStream(ts, bufferSize))
+      objOut = serializer.newInstance().serializeStream(bs)
+      initialized = true
+      BOWHolder.mappity.put(file.getAbsolutePath, this)
+    }
     this
   }
 
   override def close() {
+    _isOpen = false
     if (initialized) {
       if (syncWrites) {
         // Force outstanding writes to disk and track how long it takes
@@ -130,19 +150,19 @@ class DiskBlockObjectWriter(
         fos.getFD.sync()
         _timeWriting += System.nanoTime() - start
       }
-      objOut.close()
+//      objOut.close()
 
       _timeWriting += ts.timeWriting
 
-      channel = null
-      bs = null
-      fos = null
-      ts = null
-      objOut = null
+//      channel = null
+//      bs = null
+//      fos = null
+//      ts = null
+//      objOut = null
     }
   }
 
-  override def isOpen: Boolean = objOut != null
+  override def isOpen: Boolean = _isOpen
 
   override def commit(): Long = {
     if (initialized) {
