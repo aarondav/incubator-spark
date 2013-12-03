@@ -17,8 +17,8 @@
 
 package org.apache.spark.storage
 
-import java.io.{FileOutputStream, File, OutputStream}
-import java.nio.channels.FileChannel
+import java.io._
+import java.nio.channels.{Channels, FileChannel}
 
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream
 
@@ -102,7 +102,7 @@ class DiskBlockObjectWriter(
   /** The file channel, used for repositioning / truncating the file. */
   private var channel: FileChannel = null
   private var bs: OutputStream = null
-  private var fos: FileOutputStream = null
+  private var fos: OutputStream = null
   private var ts: TimeTrackingOutputStream = null
   private var objOut: SerializationStream = null
   private val initialPosition = file.length()
@@ -111,9 +111,11 @@ class DiskBlockObjectWriter(
   private var _timeWriting = 0L
 
   override def open(): BlockObjectWriter = {
-    fos = new FileOutputStream(file, false)
+
+    val raf = new RandomAccessFile(file, "w")
+    fos = Channels.newOutputStream(raf.getChannel) //new FileOutputStream(file, false)
     ts = new TimeTrackingOutputStream(fos)
-    channel = fos.getChannel()
+    channel = raf.getChannel()
     channel.position(initialPosition)
     lastValidPosition = initialPosition
     bs = compressStream(new FastBufferedOutputStream(ts, bufferSize))
