@@ -112,7 +112,7 @@ class DiskBlockObjectWriter(
 
   override def open(): BlockObjectWriter = {
 
-    val raf = new RandomAccessFile(file, "w")
+    val raf = new RandomAccessFile(file, "rw")
     fos = Channels.newOutputStream(raf.getChannel) //new FileOutputStream(file, false)
     ts = new TimeTrackingOutputStream(fos)
     channel = raf.getChannel()
