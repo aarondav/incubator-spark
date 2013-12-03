@@ -108,7 +108,7 @@ class DiskBlockObjectWriter(
   private var channel: FileChannel = null
   private var bs: OutputStream = null
   private var fos: FileOutputStream = null
-  private var ts: TimeTrackingOutputStream = null
+//  private var ts: TimeTrackingOutputStream = null
   private var objOut: SerializationStream = null
   private val initialPosition = file.length()
   private var lastValidPosition = initialPosition
@@ -121,7 +121,7 @@ class DiskBlockObjectWriter(
     if (BOWHolder.mappity.containsKey(file.getAbsolutePath)) {
       val old = BOWHolder.mappity.get(file.getAbsolutePath)
       fos = old.fos
-      ts = old.ts
+//      ts = old.ts
       channel = old.channel
       lastValidPosition = initialPosition
       bs = old.bs
@@ -129,10 +129,10 @@ class DiskBlockObjectWriter(
       initialized = true
     } else {
       fos = new FileOutputStream(file, true)
-      ts = new TimeTrackingOutputStream(fos)
+//      ts = new TimeTrackingOutputStream(fos)
       channel = fos.getChannel()
       lastValidPosition = initialPosition
-      bs = compressStream(new FastBufferedOutputStream(ts, bufferSize))
+      bs = compressStream(new FastBufferedOutputStream(fos, bufferSize))
       objOut = serializer.newInstance().serializeStream(bs)
       initialized = true
       BOWHolder.mappity.put(file.getAbsolutePath, this)
@@ -152,7 +152,7 @@ class DiskBlockObjectWriter(
       }
 //      objOut.close()
 
-      _timeWriting += ts.timeWriting
+//      _timeWriting += ts.timeWriting
 
 //      channel = null
 //      bs = null
