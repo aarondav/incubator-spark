@@ -17,8 +17,8 @@
 
 package org.apache.spark.storage
 
-import java.io._
-import java.nio.channels.{Channels, FileChannel}
+import java.io.{BufferedOutputStream, FileOutputStream, File, OutputStream}
+import java.nio.channels.FileChannel
 
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream
 
@@ -102,7 +102,7 @@ class DiskBlockObjectWriter(
   /** The file channel, used for repositioning / truncating the file. */
   private var channel: FileChannel = null
   private var bs: OutputStream = null
-  private var fos: OutputStream = null
+  private var fos: FileOutputStream = null
   private var ts: TimeTrackingOutputStream = null
   private var objOut: SerializationStream = null
   private val initialPosition = file.length()
@@ -111,14 +111,11 @@ class DiskBlockObjectWriter(
   private var _timeWriting = 0L
 
   override def open(): BlockObjectWriter = {
-
-    val raf = new RandomAccessFile(file, "rw")
-    fos = Channels.newOutputStream(raf.getChannel) //new FileOutputStream(file, false)
+    fos = new FileOutputStream(file, true)
     ts = new TimeTrackingOutputStream(fos)
-    channel = raf.getChannel()
-    channel.position(initialPosition)
+    channel = fos.getChannel()
     lastValidPosition = initialPosition
-    bs = compressStream(new FastBufferedOutputStream(ts, bufferSize))
+    bs = compressStream(new BufferedOutputStream(ts))
     objOut = serializer.newInstance().serializeStream(bs)
     initialized = true
     this
@@ -130,7 +127,7 @@ class DiskBlockObjectWriter(
         // Force outstanding writes to disk and track how long it takes
         objOut.flush()
         val start = System.nanoTime()
-//        fos.getFD.sync()
+        fos.getFD.sync()
         _timeWriting += System.nanoTime() - start
       }
       objOut.close()
