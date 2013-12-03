@@ -130,7 +130,7 @@ class DiskBlockObjectWriter(
         // Force outstanding writes to disk and track how long it takes
         objOut.flush()
         val start = System.nanoTime()
-        fos.getFD.sync()
+//        fos.getFD.sync()
         _timeWriting += System.nanoTime() - start
       }
       objOut.close()
