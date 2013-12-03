@@ -114,6 +114,7 @@ class DiskBlockObjectWriter(
     fos = new FileOutputStream(file, false)
     ts = new TimeTrackingOutputStream(fos)
     channel = fos.getChannel()
+    channel.position(initialPosition)
     lastValidPosition = initialPosition
     bs = compressStream(new FastBufferedOutputStream(ts, bufferSize))
     objOut = serializer.newInstance().serializeStream(bs)
