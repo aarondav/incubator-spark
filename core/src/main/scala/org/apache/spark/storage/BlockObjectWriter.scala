@@ -110,7 +110,7 @@ class DiskBlockObjectWriter(
   private var fos: FileOutputStream = null
 //  private var ts: TimeTrackingOutputStream = null
   private var objOut: SerializationStream = null
-  private val initialPosition = file.length()
+  private var initialPosition = file.length()
   private var lastValidPosition = initialPosition
   private var initialized = false
   private var _timeWriting = 0L
@@ -123,6 +123,7 @@ class DiskBlockObjectWriter(
       fos = old.fos
 //      ts = old.ts
       channel = old.channel
+      initialPosition = channel.position()
       lastValidPosition = initialPosition
       bs = old.bs
       objOut = old.objOut
