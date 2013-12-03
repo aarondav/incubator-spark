@@ -73,6 +73,24 @@ object BOWHolder {
   val mappity = new ConcurrentHashMap[String, DiskBlockObjectWriter]()
 }
 
+/** Intercepts write calls and tracks total time spent writing. Not thread safe. */
+private class TimeTrackingOutputStream(out: OutputStream) extends OutputStream {
+  def timeWriting = _timeWriting
+  private var _timeWriting = 0L
+
+  private def callWithTiming(f: => Unit) = {
+    val start = System.nanoTime()
+    f
+    _timeWriting += (System.nanoTime() - start)
+  }
+
+  def write(i: Int): Unit = callWithTiming(out.write(i))
+  override def write(b: Array[Byte]) = callWithTiming(out.write(b))
+  override def write(b: Array[Byte], off: Int, len: Int) = callWithTiming(out.write(b, off, len))
+  override def close() = out.close()
+  override def flush() = out.flush()
+}
+
 /** BlockObjectWriter which writes directly to a file on disk. Appends to the given file. */
 class DiskBlockObjectWriter(
     blockId: BlockId,
@@ -83,24 +101,6 @@ class DiskBlockObjectWriter(
   extends BlockObjectWriter(blockId)
   with Logging
 {
-
-  /** Intercepts write calls and tracks total time spent writing. Not thread safe. */
-  private class TimeTrackingOutputStream(out: OutputStream) extends OutputStream {
-    def timeWriting = _timeWriting
-    private var _timeWriting = 0L
-
-    private def callWithTiming(f: => Unit) = {
-      val start = System.nanoTime()
-      f
-      _timeWriting += (System.nanoTime() - start)
-    }
-
-    def write(i: Int): Unit = callWithTiming(out.write(i))
-    override def write(b: Array[Byte]) = callWithTiming(out.write(b))
-    override def write(b: Array[Byte], off: Int, len: Int) = callWithTiming(out.write(b, off, len))
-    override def close() = out.close()
-    override def flush() = out.flush()
-  }
 
   private val syncWrites = System.getProperty("spark.shuffle.sync", "false").toBoolean
 
