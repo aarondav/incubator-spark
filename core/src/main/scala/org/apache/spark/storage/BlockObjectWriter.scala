@@ -17,7 +17,7 @@
 
 package org.apache.spark.storage
 
-import java.io.{FileOutputStream, File, OutputStream}
+import java.io.{BufferedOutputStream, FileOutputStream, File, OutputStream}
 import java.nio.channels.FileChannel
 
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream
