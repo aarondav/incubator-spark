@@ -113,16 +113,8 @@ class ShuffleBlockManager(blockManager: BlockManager) {
       }
 
       private def getUnusedFileGroup(): ShuffleFileGroup = {
-        if (shuffleState.allFileGroups.isEmpty) {
-          newFileGroup()
-        } else {
-          shuffleState.allFileGroups.peek()
-        }
-//        val fileGroup = shuffleState.unusedFileGroups.poll()
-//        if (fileGroup != null) fileGroup else {
-//          recycleFileGroup(newFileGroup())
-//          newFileGroup()
-//        }
+        val fileGroup = shuffleState.unusedFileGroups.poll()
+        if (fileGroup != null) fileGroup else newFileGroup()
       }
 
       private def newFileGroup(): ShuffleFileGroup = {
