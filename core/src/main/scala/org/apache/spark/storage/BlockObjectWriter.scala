@@ -17,7 +17,7 @@
 
 package org.apache.spark.storage
 
-import java.io.{BufferedOutputStream, FileOutputStream, File, OutputStream}
+import java.io.{FileOutputStream, File, OutputStream}
 import java.nio.channels.FileChannel
 
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream
@@ -115,7 +115,7 @@ class DiskBlockObjectWriter(
 //    ts = new TimeTrackingOutputStream(fos)
     channel = fos.getChannel()
     lastValidPosition = initialPosition
-    bs = new BufferedOutputStream(fos) // compressStream(new FastBufferedOutputStream(fos, bufferSize))
+    bs = fos // compressStream(new FastBufferedOutputStream(fos, bufferSize))
     objOut = serializer.newInstance().serializeStream(bs)
     initialized = true
     this
