@@ -16,20 +16,21 @@ object StoragePerfTester {
     val dataSizeMb = Utils.memoryStringToMb(sys.env.getOrElse("OUTPUT_DATA", "1g"))
 
     /** Number of map tasks. All tasks execute concurrently. */
-    val numMaps = sys.env.get("NUM_MAPS").map(_.toInt).getOrElse(8)
+    val numMaps = sys.env.get("NUM_MAPS").map(_.toInt).getOrElse(800*4/5/32)
 
     /** Number of reduce splits for each map task. */
-    val numOutputSplits = sys.env.get("NUM_REDUCERS").map(_.toInt).getOrElse(500)
+    val numOutputSplits = sys.env.get("NUM_REDUCERS").map(_.toInt).getOrElse(800)
 
-    val recordLength = 1000 // ~1KB records
-    val totalRecords = dataSizeMb * 1000
-    val recordsPerMap = totalRecords / numMaps
+    val recordLength = 32 // ~1KB records
+    val totalRecords = dataSizeMb.toLong * 1024 * 1024 / recordLength
+    val recordsPerMap = (totalRecords / numMaps).toInt
 
+    val numConcurrentExecutors = 16
     val writeData = "1" * recordLength
-    val executor = Executors.newFixedThreadPool(numMaps)
+    val executor = Executors.newFixedThreadPool(numConcurrentExecutors)
 
     System.setProperty("spark.shuffle.compress", "false")
-    System.setProperty("spark.shuffle.sync", "true")
+    System.setProperty("spark.shuffle.sync", "false")
 
     // This is only used to instantiate a BlockManager. All thread scheduling is done manually.
     val sc = new SparkContext("local[4]", "Write Tester")
