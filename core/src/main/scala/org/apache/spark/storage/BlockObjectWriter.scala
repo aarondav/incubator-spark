@@ -103,7 +103,7 @@ class DiskBlockObjectWriter(
   private var channel: FileChannel = null
   private var bs: OutputStream = null
   private var fos: FileOutputStream = null
-  private var ts: TimeTrackingOutputStream = null
+//  private var ts: TimeTrackingOutputStream = null
   private var objOut: SerializationStream = null
   private val initialPosition = file.length()
   private var lastValidPosition = initialPosition
@@ -112,10 +112,10 @@ class DiskBlockObjectWriter(
 
   override def open(): BlockObjectWriter = {
     fos = new FileOutputStream(file, true)
-    ts = new TimeTrackingOutputStream(fos)
+//    ts = new TimeTrackingOutputStream(fos)
     channel = fos.getChannel()
     lastValidPosition = initialPosition
-    bs = compressStream(new FastBufferedOutputStream(ts, bufferSize))
+    bs = compressStream(new FastBufferedOutputStream(fos, bufferSize))
     objOut = serializer.newInstance().serializeStream(bs)
     initialized = true
     this
@@ -132,12 +132,12 @@ class DiskBlockObjectWriter(
       }
       objOut.close()
 
-      _timeWriting += ts.timeWriting
+//      _timeWriting += ts.timeWriting
 
       channel = null
       bs = null
       fos = null
-      ts = null
+//      ts = null
       objOut = null
     }
   }
