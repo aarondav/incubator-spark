@@ -111,7 +111,7 @@ class DiskBlockObjectWriter(
   private var _timeWriting = 0L
 
   override def open(): BlockObjectWriter = {
-    fos = new FileOutputStream("/dev/null", true)
+    fos = new FileOutputStream(file, true)
     ts = new TimeTrackingOutputStream(fos)
     channel = fos.getChannel()
     lastValidPosition = initialPosition
