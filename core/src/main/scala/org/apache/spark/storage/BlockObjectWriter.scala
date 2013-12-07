@@ -161,7 +161,6 @@ class DiskBlockObjectWriter(
       // truncate the file to the last valid position.
       objOut.flush()
       bs.flush()
-      throw new UnsupportedOperationException("Revert not working")
 //      channel.truncate(lastValidPosition)
     }
   }
