@@ -158,6 +158,7 @@ class ShuffleBlockManager(blockManager: BlockManager) {
   }
 
   def removeAllShuffleStuff() {
+    // TODO Warning -- may cause NPE because we try to remove the file from disk as well.
     for (state <- shuffleStates.values;
          group <- state.allFileGroups;
          (mapId, _) <- group.mapIdToIndex.iterator;
