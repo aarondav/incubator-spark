@@ -22,6 +22,7 @@ import java.util.concurrent.ArrayBlockingQueue
 import java.nio.ByteBuffer
 import collection.mutable.ArrayBuffer
 import org.apache.spark.util.{SizeEstimator, Utils}
+import org.apache.spark.serializer.Serializer
 
 /**
  * Stores blocks in memory, either as ArrayBuffers of deserialized Java objects or as
@@ -95,6 +96,10 @@ private class MemoryStore(blockManager: BlockManager, maxMemory: Long)
   }
 
   override def getValues(blockId: BlockId): Option[Iterator[Any]] = {
+    getValues(blockId, blockManager.defaultSerializer)
+  }
+
+  def getValues(blockId: BlockId, serializer: Serializer): Option[Iterator[Any]] = {
     val entry = entries.synchronized {
       entries.get(blockId)
     }
@@ -104,9 +109,10 @@ private class MemoryStore(blockManager: BlockManager, maxMemory: Long)
       Some(entry.value.asInstanceOf[ArrayBuffer[Any]].iterator)
     } else {
       val buffer = entry.value.asInstanceOf[ByteBuffer].duplicate() // Doesn't actually copy data
-      Some(blockManager.dataDeserialize(blockId, buffer))
+      Some(blockManager.dataDeserialize(blockId, buffer, serializer))
     }
   }
+
 
   override def remove(blockId: BlockId): Boolean = {
     entries.synchronized {
