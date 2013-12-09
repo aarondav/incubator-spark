@@ -36,14 +36,14 @@ import org.apache.spark.util.{MetadataCleanerType, Utils, MetadataCleaner, TimeS
 
 
 private[spark] sealed trait MapOutputTrackerMessage
-private[spark] case class GetMapOutputStatuses(shuffleId: Int, requester: String)
+private[spark] case class GetMapOutputStatuses(shuffleId: Int, requester: String, reqId: Double)
   extends MapOutputTrackerMessage
 private[spark] case object StopMapOutputTracker extends MapOutputTrackerMessage
 
 private[spark] class MapOutputTrackerActor(tracker: MapOutputTracker) extends Actor with Logging {
   def receive = {
-    case GetMapOutputStatuses(shuffleId: Int, requester: String) =>
-      logInfo("Asked to send map output locations for shuffle " + shuffleId + " to " + requester)
+    case GetMapOutputStatuses(shuffleId: Int, requester: String, reqId) =>
+      logInfo("Asked to send map output locations for shuffle " + shuffleId + " to " + requester + "(" + reqId + ")")
       sender ! tracker.getSerializedLocations(shuffleId)
 
     case StopMapOutputTracker =>
@@ -75,10 +75,14 @@ private[spark] class MapOutputTracker extends Logging {
 
   // Send a message to the trackerActor and get its result within a default timeout, or
   // throw a SparkException if this fails.
-  def askTracker(message: Any): Any = {
+  def askTracker(message: Any, seed: Double = 0): Any = {
     try {
+      logWarning("[REDUCER] Asking MOT (" + seed + ")")
       val future = trackerActor.ask(message)(timeout)
-      return Await.result(future, timeout)
+      logWarning("[REDUCER] Preparing wait (" + seed + ")")
+      val res = Await.result(future, timeout)
+      logWarning("[REDUCER] Received response (" + seed + ")")
+      res
     } catch {
       case e: Exception =>
         throw new SparkException("Error communicating with MapOutputTracker", e)
@@ -166,8 +170,9 @@ private[spark] class MapOutputTracker extends Logging {
         val hostPort = Utils.localHostPort()
         // This try-finally prevents hangs due to timeouts:
         try {
+          val seed = math.random
           val fetchedBytes =
-            askTracker(GetMapOutputStatuses(shuffleId, hostPort)).asInstanceOf[Array[Byte]]
+            askTracker(GetMapOutputStatuses(shuffleId, hostPort, seed), seed).asInstanceOf[Array[Byte]]
           fetchedStatuses = deserializeStatuses(fetchedBytes)
           logInfo("Got the output locations")
           mapStatuses.put(shuffleId, fetchedStatuses)
